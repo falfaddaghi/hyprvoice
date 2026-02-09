@@ -240,6 +240,16 @@ func newVoiceProviderScreen(state *wizardState, onBack func() screen, onNext fun
 			providerName = "mistral"
 		}
 
+		// nemotron: prompt for server URL if not set, then go to model screen
+		if selectedProvider == "nemotron" {
+			if state.cfg.Transcription.NemotronURL == "" {
+				return newNemotronURLScreen(state, func() screen {
+					return newVoiceModelScreen(state, selectedProvider, onBack, onNext)
+				}, func() screen { return newVoiceProviderScreen(state, onBack, onNext) })
+			}
+			return newVoiceModelScreen(state, selectedProvider, onBack, onNext)
+		}
+
 		if selectedProvider != "whisper-cpp" && !isProviderConfigured(state.cfg, providerName) {
 			return newProviderKeyFlow(state, providerName, func() screen {
 				return newVoiceModelScreen(state, selectedProvider, onBack, onNext)
@@ -254,6 +264,30 @@ func newVoiceProviderScreen(state *wizardState, onBack func() screen, onNext fun
 		selectListByValue(&screen.list, state.cfg.Transcription.Provider)
 	}
 	return screen
+}
+
+func newNemotronURLScreen(state *wizardState, onContinue func() screen, onCancel func() screen) screen {
+	desc := []string{
+		"Enter the base URL of your running NeMo inference server.",
+		"The server must expose a /transcribe endpoint.",
+	}
+	initial := state.cfg.Transcription.NemotronURL
+	if initial == "" {
+		initial = "http://localhost:8080"
+	}
+	validate := func(s string) error {
+		if s == "" {
+			return fmt.Errorf("server URL is required")
+		}
+		if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+			return fmt.Errorf("URL must start with http:// or https://")
+		}
+		return nil
+	}
+	return newInputScreen(state, "Nemotron Server URL", desc, initial, "http://localhost:8080", false, validate, func(value string) screen {
+		state.cfg.Transcription.NemotronURL = value
+		return onContinue()
+	}, onCancel)
 }
 
 func newVoiceModelScreen(state *wizardState, providerName string, onBack func() screen, onNext func() screen) screen {
@@ -866,6 +900,8 @@ func buildVoiceProviderOptions(cfg *config.Config) []optionItem {
 	} else {
 		options = append(options, optionItem{title: "Whisper.cpp (local)", desc: "Install whisper-cli to enable local models.", value: "whisper-cpp-disabled"})
 	}
+
+	options = append(options, optionItem{title: "Nemotron ASR (local)", desc: "NVIDIA Nemotron Speech 0.6B via local NeMo server.", value: "nemotron"})
 
 	configured := getConfiguredProviders(cfg)
 	for _, name := range configured {

@@ -23,12 +23,13 @@ func (c *Config) ToRecordingConfig() recording.Config {
 
 func (c *Config) ToTranscriberConfig() transcriber.Config {
 	config := transcriber.Config{
-		Provider:  c.Transcription.Provider,
-		Language:  c.resolveEffectiveLanguage(),
-		Model:     c.Transcription.Model,
-		Keywords:  c.Keywords,
-		Threads:   c.Transcription.Threads,
-		Streaming: c.Transcription.Streaming,
+		Provider:    c.Transcription.Provider,
+		Language:    c.resolveEffectiveLanguage(),
+		Model:       c.Transcription.Model,
+		Keywords:    c.Keywords,
+		Threads:     c.Transcription.Threads,
+		Streaming:   c.Transcription.Streaming,
+		NemotronURL: c.Transcription.NemotronURL,
 	}
 
 	config.APIKey = c.resolveAPIKeyForProvider(c.Transcription.Provider)

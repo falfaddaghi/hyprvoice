@@ -14,6 +14,8 @@ var whisperTranscriptionLanguages = openaiTranscriptionLanguages
 
 var whisperEnglishOnlyLanguages = []string{"en"}
 
+var nemotronTranscriptionLanguages = []string{"en"}
+
 var deepgramNova3Languages = []string{
 	"multi",
 	"ar", "ar-AE", "ar-SA", "ar-QA", "ar-KW", "ar-SY", "ar-LB", "ar-PS", "ar-JO", "ar-EG", "ar-SD", "ar-TD", "ar-MA", "ar-DZ", "ar-TN", "ar-IQ", "ar-IR",

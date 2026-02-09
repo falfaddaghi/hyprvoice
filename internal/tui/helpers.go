@@ -14,7 +14,7 @@ import (
 var AllProviders = []string{"openai", "groq", "mistral", "elevenlabs", "deepgram"}
 
 // LocalProviders is the list of local providers (no API key required).
-var LocalProviders = []string{"whisper-cpp"}
+var LocalProviders = []string{"whisper-cpp", "nemotron"}
 
 // providerDisplayNames maps provider IDs to human-readable names.
 var providerDisplayNames = map[string]string{
@@ -24,6 +24,7 @@ var providerDisplayNames = map[string]string{
 	"elevenlabs":  "ElevenLabs",
 	"deepgram":    "Deepgram",
 	"whisper-cpp": "Whisper.cpp (local)",
+	"nemotron":    "Nemotron ASR (local)",
 }
 
 func getProviderDisplayName(providerName string) string {

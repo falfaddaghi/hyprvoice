@@ -1,0 +1,12 @@
+FROM nvcr.io/nvidia/nemo:24.12
+
+RUN pip install --no-cache-dir flask
+
+# Pre-download the model at build time so container starts fast
+RUN python3 -c "import nemo.collections.asr as asr; asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v2')"
+
+COPY nemotron_server.py /app/nemotron_server.py
+
+EXPOSE 8080
+
+CMD ["python3", "/app/nemotron_server.py", "--port", "8080"]

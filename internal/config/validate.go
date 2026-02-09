@@ -105,6 +105,11 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	// validate nemotron_url is set when provider is nemotron
+	if registryName == provider.ProviderNemotron && c.Transcription.NemotronURL == "" {
+		return fmt.Errorf("transcription.nemotron_url is required when using the nemotron provider")
+	}
+
 	// LLM validation
 	if c.LLM.Enabled {
 		if c.LLM.Provider == "" {

@@ -8,6 +8,7 @@ const (
 	ProviderElevenLabs = "elevenlabs"
 	ProviderDeepgram   = "deepgram"
 	ProviderWhisperCpp = "whisper-cpp"
+	ProviderNemotron   = "nemotron"
 )
 
 // Config provider names (used in config file transcription.provider)
@@ -36,6 +37,7 @@ const (
 	AdapterElevenLabsStream = "elevenlabs-streaming"
 	AdapterDeepgram         = "deepgram"
 	AdapterWhisperCpp       = "whisper-cpp"
+	AdapterNemotron         = "nemotron"
 	AdapterOpenAIRealtime   = "openai-realtime"
 )
 

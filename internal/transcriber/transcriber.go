@@ -31,8 +31,9 @@ type Config struct {
 	Language  string
 	Model     string
 	Keywords  []string
-	Threads   int  // CPU threads for local transcription (0 = auto)
-	Streaming bool // use streaming mode if model supports it
+	Threads     int    // CPU threads for local transcription (0 = auto)
+	Streaming   bool   // use streaming mode if model supports it
+	NemotronURL string // base URL for Nemotron NeMo inference server
 }
 
 // NewTranscriber creates a new transcriber based on model metadata
@@ -132,6 +133,11 @@ func NewTranscriber(config Config) (Transcriber, error) {
 			return nil, fmt.Errorf("unknown whisper model: %s", config.Model)
 		}
 		adapter = NewWhisperCppAdapter(modelPath, config.Language, config.Threads)
+	case provider.AdapterNemotron:
+		if config.NemotronURL == "" {
+			return nil, fmt.Errorf("nemotron server URL required: set transcription.nemotron_url in config")
+		}
+		adapter = NewNemotronAdapter(config.NemotronURL)
 	default:
 		return nil, fmt.Errorf("unsupported adapter type: %s", model.AdapterType)
 	}
