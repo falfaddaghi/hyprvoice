@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git /whisper.cpp
+RUN git clone --depth 1 --branch v1.8.3 https://github.com/ggerganov/whisper.cpp.git /whisper.cpp
 
 WORKDIR /whisper.cpp
 RUN cmake -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON && \

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/leonardotrapani/hyprvoice/internal/provider"
 )
 
@@ -79,7 +82,7 @@ func (c *Config) Validate() error {
 		if apiKey == "" {
 			envVar := envVarForProvider(registryName)
 			return fmt.Errorf("%s API key required: not found in config (providers.%s.api_key) or environment variable (%s)",
-				strings.Title(registryName), registryName, envVar)
+				cases.Title(language.English).String(registryName), registryName, envVar)
 		}
 	}
 
@@ -148,7 +151,7 @@ func (c *Config) Validate() error {
 			if llmAPIKey == "" {
 				envVar := envVarForProvider(c.LLM.Provider)
 				return fmt.Errorf("%s API key required for LLM: not found in config (providers.%s.api_key) or environment variable (%s)",
-					strings.Title(c.LLM.Provider), c.LLM.Provider, envVar)
+					cases.Title(language.English).String(c.LLM.Provider), c.LLM.Provider, envVar)
 			}
 		}
 	}
@@ -191,7 +194,7 @@ func (c *Config) Validate() error {
 			if vimAPIKey == "" {
 				envVar := envVarForProvider(c.Vim.LLM.Provider)
 				return fmt.Errorf("%s API key required for vim LLM: not found in config (providers.%s.api_key) or environment variable (%s)",
-					strings.Title(c.Vim.LLM.Provider), c.Vim.LLM.Provider, envVar)
+					cases.Title(language.English).String(c.Vim.LLM.Provider), c.Vim.LLM.Provider, envVar)
 			}
 		}
 	}
