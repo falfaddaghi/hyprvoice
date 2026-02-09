@@ -19,6 +19,7 @@ func TestProviderInterface(t *testing.T) {
 		{"groq", true, true, false, "whisper-large-v3-turbo", "llama-3.3-70b-versatile"},
 		{"mistral", true, false, false, "voxtral-mini-latest", ""},
 		{"elevenlabs", true, false, false, "scribe_v1", ""},
+		{"opencode", false, true, false, "", "opencode/glm-4.7-free"},
 	}
 
 	for _, tc := range providers {
@@ -78,7 +79,7 @@ func TestGetProviderNotFound(t *testing.T) {
 
 func TestListProviders(t *testing.T) {
 	providers := ListProviders()
-	expected := []string{"openai", "groq", "mistral", "elevenlabs"}
+	expected := []string{"openai", "groq", "mistral", "elevenlabs", "opencode"}
 
 	for _, name := range expected {
 		if !slices.Contains(providers, name) {
@@ -101,7 +102,7 @@ func TestListProvidersWithTranscription(t *testing.T) {
 
 func TestListProvidersWithLLM(t *testing.T) {
 	providers := ListProvidersWithLLM()
-	expected := []string{"openai", "groq"}
+	expected := []string{"openai", "groq", "opencode"}
 
 	for _, name := range expected {
 		if !slices.Contains(providers, name) {
@@ -134,6 +135,8 @@ func TestValidateAPIKey(t *testing.T) {
 		{"mistral", "", false},
 		{"elevenlabs", "any-non-empty", true},
 		{"elevenlabs", "", false},
+		{"opencode", "any-non-empty", true},
+		{"opencode", "", false},
 	}
 
 	for _, tc := range tests {

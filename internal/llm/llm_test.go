@@ -133,6 +133,20 @@ func TestNewAdapter(t *testing.T) {
 		t.Error("expected GroqAdapter type")
 	}
 
+	// Test OpenCode adapter creation
+	opencodeCfg := Config{
+		Provider: "opencode",
+		APIKey:   "oc-test-key",
+		Model:    "opencode/glm-4.7-free",
+	}
+	adapter, err = NewAdapter(opencodeCfg)
+	if err != nil {
+		t.Fatalf("failed to create opencode adapter: %v", err)
+	}
+	if _, ok := adapter.(*OpenCodeAdapter); !ok {
+		t.Error("expected OpenCodeAdapter type")
+	}
+
 	// Test missing API key
 	noKeyCfg := Config{
 		Provider: "openai",

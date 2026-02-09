@@ -32,6 +32,7 @@ func init() {
 	Register(&WhisperCppProvider{})
 	Register(&NemotronProvider{})
 	Register(&DeepgramProvider{})
+	Register(&OpenCodeProvider{})
 }
 
 // Register adds a provider to the registry
