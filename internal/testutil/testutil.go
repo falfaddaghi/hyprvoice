@@ -312,6 +312,7 @@ func (m *MockTranscriber) GetFinalTranscription() (string, error) {
 // MockInjector implements injection.Injector for testing
 type MockInjector struct {
 	InjectedTexts []string
+	InjectedKeys  []string
 	InjectError   error
 
 	mu sync.Mutex
@@ -327,6 +328,16 @@ func (m *MockInjector) Inject(ctx context.Context, text string) error {
 	}
 	m.mu.Lock()
 	m.InjectedTexts = append(m.InjectedTexts, text)
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *MockInjector) InjectKeys(ctx context.Context, keys string) error {
+	if m.InjectError != nil {
+		return m.InjectError
+	}
+	m.mu.Lock()
+	m.InjectedKeys = append(m.InjectedKeys, keys)
 	m.mu.Unlock()
 	return nil
 }

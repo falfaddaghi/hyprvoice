@@ -16,6 +16,12 @@ import (
 
 type Status string
 type Action string
+type Mode string
+
+const (
+	ModeDictation Mode = "dictation"
+	ModeVim       Mode = "vim"
+)
 
 type PipelineError struct {
 	Title   string
@@ -84,6 +90,7 @@ func WithLLMAdapterFactory(f LLMAdapterFactory) Option {
 
 type pipeline struct {
 	status   Status
+	mode     Mode
 	actionCh chan Action
 	errorCh  chan PipelineError
 	notifyCh chan notify.MessageType
@@ -104,7 +111,12 @@ type pipeline struct {
 }
 
 func New(cfg *config.Config, opts ...Option) Pipeline {
+	return NewWithMode(cfg, ModeDictation, opts...)
+}
+
+func NewWithMode(cfg *config.Config, mode Mode, opts ...Option) Pipeline {
 	p := &pipeline{
+		mode:     mode,
 		actionCh: make(chan Action, 1),
 		errorCh:  make(chan PipelineError, 10),
 		notifyCh: make(chan notify.MessageType, 10),
@@ -300,7 +312,17 @@ func (p *pipeline) handleInjectAction(ctx context.Context, recorder recording.Re
 	}
 	log.Printf("Pipeline: Final transcription text: %s", transcriptionText)
 
-	// LLM post-processing phase
+	switch p.mode {
+	case ModeVim:
+		p.handleVimInjection(ctx, transcriptionText)
+	default:
+		p.handleDictationInjection(ctx, transcriptionText)
+	}
+
+	p.setStatus(Idle)
+}
+
+func (p *pipeline) handleDictationInjection(ctx context.Context, transcriptionText string) {
 	textToInject := transcriptionText
 	if p.config.IsLLMEnabled() {
 		p.setStatus(Processing)
@@ -340,8 +362,48 @@ func (p *pipeline) handleInjectAction(ctx context.Context, recorder recording.Re
 	} else {
 		log.Printf("Pipeline: Text injection completed successfully")
 	}
+}
 
-	p.setStatus(Idle)
+func (p *pipeline) handleVimInjection(ctx context.Context, transcriptionText string) {
+	p.setStatus(Processing)
+	p.sendNotify(notify.MsgVimProcessing)
+	log.Printf("Pipeline: Vim mode - converting speech to keystrokes")
+
+	vimCfg := p.config.ToVimLLMConfig()
+	systemPrompt := llm.BuildVimSystemPrompt(p.config.Vim.CustomActions, p.config.Vim.LLM.CustomPrompt)
+
+	adapter, err := p.llmAdapterFactory(llm.Config{
+		Provider:     vimCfg.Provider,
+		APIKey:       vimCfg.APIKey,
+		Model:        vimCfg.Model,
+		SystemPrompt: systemPrompt,
+	})
+	if err != nil {
+		p.sendError("Vim Error", "Failed to create LLM adapter for vim mode", err)
+		return
+	}
+
+	vimKeys, err := adapter.Process(ctx, llm.BuildVimUserPrompt(transcriptionText))
+	if err != nil {
+		p.sendError("Vim Error", "Failed to convert speech to vim keystrokes", err)
+		return
+	}
+
+	log.Printf("Pipeline: Vim keystrokes: %s", vimKeys)
+
+	if vimKeys == "" {
+		log.Printf("Pipeline: Vim mode - LLM returned empty keystrokes, nothing to inject")
+		return
+	}
+
+	p.setStatus(Injecting)
+	injector := p.injectorFactory(p.config.ToInjectionConfig())
+
+	if err := injector.InjectKeys(ctx, vimKeys); err != nil {
+		p.sendError("Vim Injection Error", "Failed to inject vim keystrokes", err)
+	} else {
+		log.Printf("Pipeline: Vim keystroke injection completed successfully")
+	}
 }
 
 func (p *pipeline) Stop() {

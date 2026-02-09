@@ -21,6 +21,7 @@ type Config struct {
 	RemoveFillerWords bool
 	CustomPrompt      string
 	Keywords          []string
+	SystemPrompt      string // override system prompt entirely (used by vim mode)
 }
 
 // NewAdapter creates an LLM adapter based on the provider

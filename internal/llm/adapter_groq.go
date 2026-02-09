@@ -30,14 +30,18 @@ func (a *GroqAdapter) Process(ctx context.Context, text string) (string, error) 
 		return "", nil
 	}
 
-	opts := PostProcessingOptions{
-		RemoveStutters:    a.config.RemoveStutters,
-		AddPunctuation:    a.config.AddPunctuation,
-		FixGrammar:        a.config.FixGrammar,
-		RemoveFillerWords: a.config.RemoveFillerWords,
+	var systemPrompt string
+	if a.config.SystemPrompt != "" {
+		systemPrompt = a.config.SystemPrompt
+	} else {
+		opts := PostProcessingOptions{
+			RemoveStutters:    a.config.RemoveStutters,
+			AddPunctuation:    a.config.AddPunctuation,
+			FixGrammar:        a.config.FixGrammar,
+			RemoveFillerWords: a.config.RemoveFillerWords,
+		}
+		systemPrompt = BuildSystemPrompt(opts, a.config.Keywords)
 	}
-
-	systemPrompt := BuildSystemPrompt(opts, a.config.Keywords)
 	userPrompt := BuildUserPrompt(text, a.config.CustomPrompt)
 
 	model := a.config.Model

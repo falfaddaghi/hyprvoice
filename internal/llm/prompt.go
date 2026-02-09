@@ -63,3 +63,43 @@ func BuildUserPrompt(text string, customPrompt string) string {
 	}
 	return text
 }
+
+// BuildVimSystemPrompt generates the system prompt for vim keystroke translation
+func BuildVimSystemPrompt(customActions []string, customPrompt string) string {
+	prompt := `You are a vim command translator. Your job is to convert spoken English descriptions into exact vim keystrokes.
+
+Default whitelist of allowed vim actions:
+
+Motions: h j k l w b e 0 $ ^ gg G { } %
+Editing: i a o O x dd yy p P u <C-r>
+Search: / ? n N
+Navigation: gd gD gr ]q [q
+Window/Buffer: <C-w>s <C-w>v gt gT`
+
+	if len(customActions) > 0 {
+		prompt += fmt.Sprintf("\nCustom actions: %s", strings.Join(customActions, " "))
+	}
+
+	prompt += `
+
+Rules:
+- Output ONLY the vim keystrokes, nothing else
+- Use <Esc> <CR> <C-x> notation for special keys (e.g., <C-w> for Ctrl+W, <Esc> for Escape, <CR> for Enter)
+- Support numeric prefixes (e.g., "move down 5 lines" -> "5j")
+- For search commands, include the search term and <CR> (e.g., "search for error" -> "/error<CR>")
+- If the spoken text is unclear or doesn't map to a vim action, return an empty string
+- Never output text that is not a valid vim keystroke sequence
+- Combine keystrokes as needed (e.g., "delete 3 words" -> "3dw", "change inside quotes" -> "ci\"")
+- For insert mode commands, only output the keystroke to enter insert mode, not the text to type`
+
+	if customPrompt != "" {
+		prompt += "\n\n" + customPrompt
+	}
+
+	return prompt
+}
+
+// BuildVimUserPrompt generates the user prompt for vim keystroke translation
+func BuildVimUserPrompt(spokenText string) string {
+	return fmt.Sprintf("Convert this spoken command to vim keystrokes: %s", spokenText)
+}

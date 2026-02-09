@@ -34,5 +34,8 @@ func DefaultConfig() *Config {
 		LLM: LLMConfig{
 			Enabled: false,
 		},
+		Vim: VimConfig{
+			Enabled: false,
+		},
 	}
 }

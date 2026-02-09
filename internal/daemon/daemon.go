@@ -174,6 +174,15 @@ func (d *Daemon) handle(c net.Conn) {
 		fmt.Fprintf(c, "STATUS status=%s\n", status)
 	case 'v':
 		fmt.Fprintf(c, "STATUS proto=%s\n", bus.ProtoVer)
+	case 'p':
+		d.pttStart(pipeline.ModeDictation)
+		fmt.Fprint(c, "OK ptt-started\n")
+	case 'e':
+		d.pttStart(pipeline.ModeVim)
+		fmt.Fprint(c, "OK vim-started\n")
+	case 'r':
+		d.pttStop()
+		fmt.Fprint(c, "OK ptt-stopped\n")
 	case 'q':
 		fmt.Fprint(c, "OK quitting\n")
 		d.cancel()
@@ -221,6 +230,74 @@ func (d *Daemon) toggle() {
 	case pipeline.Injecting:
 		d.stopPipeline()
 		go d.notifier.Send(notify.MsgInjectionAborted)
+	}
+}
+
+func (d *Daemon) pttStart(mode pipeline.Mode) {
+	if d.configMgr.IsLegacy() {
+		d.notifier.Error("Legacy config detected. Run: hyprvoice onboarding")
+		return
+	}
+	conf := d.configMgr.GetConfig()
+
+	if mode == pipeline.ModeVim && !conf.IsVimEnabled() {
+		d.notifier.Error("Vim mode not enabled. Set [vim] enabled = true with provider/model in config.")
+		return
+	}
+
+	if d.status() != pipeline.Idle {
+		log.Printf("Daemon: PTT start requested but pipeline is not idle, ignoring")
+		return
+	}
+
+	p := pipeline.NewWithMode(conf, mode)
+	p.Run(d.ctx)
+
+	d.mu.Lock()
+	d.pipeline = p
+	d.mu.Unlock()
+
+	if mode == pipeline.ModeVim {
+		go d.notifier.Send(notify.MsgVimRecordingStarted)
+	} else {
+		go d.notifier.Send(notify.MsgRecordingStarted)
+	}
+	go d.monitorPipelineErrors(p)
+	go d.monitorPipelineNotifications(p)
+}
+
+func (d *Daemon) pttStop() {
+	switch d.status() {
+	case pipeline.Idle:
+		log.Printf("Daemon: PTT stop requested but pipeline is idle, ignoring")
+
+	case pipeline.Recording:
+		// Brief window before transcription starts; stop and inject anyway
+		d.mu.RLock()
+		if d.pipeline != nil {
+			actionChan := d.pipeline.GetActionCh()
+			log.Printf("Daemon: PTT stop in recording state, sending inject action")
+			d.mu.RUnlock()
+			actionChan <- pipeline.Inject
+		} else {
+			d.mu.RUnlock()
+		}
+		go d.notifier.Send(notify.MsgTranscribing)
+
+	case pipeline.Transcribing:
+		d.mu.RLock()
+		if d.pipeline != nil {
+			actionChan := d.pipeline.GetActionCh()
+			log.Printf("Daemon: PTT stop, sending inject action")
+			d.mu.RUnlock()
+			actionChan <- pipeline.Inject
+		} else {
+			d.mu.RUnlock()
+		}
+		go d.notifier.Send(notify.MsgTranscribing)
+
+	case pipeline.Processing, pipeline.Injecting:
+		log.Printf("Daemon: PTT stop requested but already processing/injecting, ignoring")
 	}
 }
 

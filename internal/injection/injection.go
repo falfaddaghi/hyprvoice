@@ -9,6 +9,7 @@ import (
 
 type Injector interface {
 	Inject(ctx context.Context, text string) error
+	InjectKeys(ctx context.Context, keys string) error
 }
 
 type Config struct {
@@ -70,6 +71,33 @@ func (i *injector) Inject(ctx context.Context, text string) error {
 	}
 
 	return fmt.Errorf("all injection backends failed, last error: %w", lastErr)
+}
+
+func (i *injector) InjectKeys(ctx context.Context, keys string) error {
+	if keys == "" {
+		return fmt.Errorf("cannot inject empty keystrokes")
+	}
+
+	// Try each backend in order, skipping clipboard (clipboard paste doesn't make sense for vim keystrokes)
+	var lastErr error
+	for _, backend := range i.backends {
+		if backend.Name() == "clipboard" {
+			continue
+		}
+		timeout := i.getTimeout(backend.Name())
+		err := backend.InjectKeys(ctx, keys, timeout)
+		if err == nil {
+			log.Printf("Injection: keys success via %s", backend.Name())
+			return nil
+		}
+		log.Printf("Injection: %s InjectKeys failed: %v, trying next backend", backend.Name(), err)
+		lastErr = err
+	}
+
+	if lastErr == nil {
+		return fmt.Errorf("no suitable backend for keystroke injection (clipboard is not supported)")
+	}
+	return fmt.Errorf("all injection backends failed for keystrokes, last error: %w", lastErr)
 }
 
 func (i *injector) getTimeout(backendName string) time.Duration {

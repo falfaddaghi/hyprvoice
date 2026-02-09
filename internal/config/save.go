@@ -102,6 +102,35 @@ func Save(cfg *Config) error {
 	}
 	sb.WriteString("\n")
 
+	// Vim
+	sb.WriteString(`# Vim Voice Command Mode
+[vim]
+`)
+	sb.WriteString(fmt.Sprintf("  enabled = %v\n", cfg.Vim.Enabled))
+	if len(cfg.Vim.CustomActions) > 0 {
+		sb.WriteString("  custom_actions = [")
+		for i, a := range cfg.Vim.CustomActions {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", a))
+		}
+		sb.WriteString("]\n")
+	}
+	sb.WriteString("\n")
+
+	sb.WriteString("  [vim.llm]\n")
+	if cfg.Vim.LLM.Provider != "" {
+		sb.WriteString(fmt.Sprintf("    provider = %q\n", cfg.Vim.LLM.Provider))
+	}
+	if cfg.Vim.LLM.Model != "" {
+		sb.WriteString(fmt.Sprintf("    model = %q\n", cfg.Vim.LLM.Model))
+	}
+	if cfg.Vim.LLM.CustomPrompt != "" {
+		sb.WriteString(fmt.Sprintf("    custom_prompt = %q\n", cfg.Vim.LLM.CustomPrompt))
+	}
+	sb.WriteString("\n")
+
 	// Injection
 	sb.WriteString(`# Text Injection Configuration
 [injection]

@@ -52,3 +52,7 @@ func (c *clipboardBackend) Inject(ctx context.Context, text string, timeout time
 
 	return nil
 }
+
+func (c *clipboardBackend) InjectKeys(_ context.Context, _ string, _ time.Duration) error {
+	return fmt.Errorf("clipboard backend does not support keystroke injection")
+}

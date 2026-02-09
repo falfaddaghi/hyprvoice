@@ -153,6 +153,49 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// Vim mode validation
+	if c.Vim.Enabled {
+		if c.Vim.LLM.Provider == "" {
+			return fmt.Errorf("vim.llm.provider required when vim.enabled = true")
+		}
+		if c.Vim.LLM.Model == "" {
+			return fmt.Errorf("vim.llm.model required when vim.enabled = true")
+		}
+
+		// validate vim LLM provider exists
+		vimProvider := provider.GetProvider(c.Vim.LLM.Provider)
+		if vimProvider == nil {
+			providers := provider.ListProvidersWithLLM()
+			return fmt.Errorf("invalid vim.llm.provider: %s (available: %s)", c.Vim.LLM.Provider, strings.Join(providers, ", "))
+		}
+
+		// validate vim LLM model exists
+		vimModel, err := provider.GetModel(c.Vim.LLM.Provider, c.Vim.LLM.Model)
+		if err != nil {
+			models := provider.ModelsOfType(vimProvider, provider.LLM)
+			modelIDs := make([]string, len(models))
+			for i, m := range models {
+				modelIDs[i] = m.ID
+			}
+			return fmt.Errorf("invalid vim.llm.model: %s (available for %s: %s)", c.Vim.LLM.Model, c.Vim.LLM.Provider, strings.Join(modelIDs, ", "))
+		}
+
+		// verify model is actually an LLM
+		if vimModel.Type != provider.LLM {
+			return fmt.Errorf("invalid vim.llm.model: %s is not an LLM model", c.Vim.LLM.Model)
+		}
+
+		// validate vim LLM API key
+		if vimProvider.RequiresAPIKey() {
+			vimAPIKey := c.resolveAPIKeyForLLMProvider(c.Vim.LLM.Provider)
+			if vimAPIKey == "" {
+				envVar := envVarForProvider(c.Vim.LLM.Provider)
+				return fmt.Errorf("%s API key required for vim LLM: not found in config (providers.%s.api_key) or environment variable (%s)",
+					strings.Title(c.Vim.LLM.Provider), c.Vim.LLM.Provider, envVar)
+			}
+		}
+	}
+
 	if len(c.Injection.Backends) == 0 {
 		return fmt.Errorf("invalid injection.backends: empty (must have at least one backend)")
 	}

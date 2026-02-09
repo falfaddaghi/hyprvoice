@@ -11,6 +11,8 @@ const (
 	MsgOperationCancelled
 	MsgRecordingAborted
 	MsgInjectionAborted
+	MsgVimRecordingStarted
+	MsgVimProcessing
 )
 
 // MessageDef defines a message type with its config key and defaults
@@ -31,6 +33,8 @@ var MessageDefs = []MessageDef{
 	{MsgOperationCancelled, "operation_cancelled", "Hyprvoice", "Operation Cancelled", false},
 	{MsgRecordingAborted, "recording_aborted", "", "Recording Aborted", true},
 	{MsgInjectionAborted, "injection_aborted", "", "Injection Aborted", true},
+	{MsgVimRecordingStarted, "vim_recording_started", "Hyprvoice", "Vim Mode: Recording...", false},
+	{MsgVimProcessing, "vim_processing", "Hyprvoice", "Vim Mode: Converting to keystrokes...", false},
 }
 
 // Message is a resolved message ready for display

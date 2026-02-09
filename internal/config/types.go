@@ -21,6 +21,21 @@ type Config struct {
 	Providers     map[string]ProviderConfig `toml:"providers"`
 	Keywords      []string                  `toml:"keywords"`
 	LLM           LLMConfig                 `toml:"llm"`
+	Vim           VimConfig                 `toml:"vim"`
+}
+
+// VimConfig configures the vim voice command mode
+type VimConfig struct {
+	Enabled       bool         `toml:"enabled"`
+	CustomActions []string     `toml:"custom_actions"` // user's custom vim actions to add to whitelist
+	LLM           VimLLMConfig `toml:"llm"`
+}
+
+// VimLLMConfig configures the LLM used for vim command translation
+type VimLLMConfig struct {
+	Provider     string `toml:"provider"`      // reuse from [providers]
+	Model        string `toml:"model"`
+	CustomPrompt string `toml:"custom_prompt"` // extra instructions
 }
 
 // ProviderConfig holds API key for a provider
@@ -89,13 +104,15 @@ type MessageConfig struct {
 }
 
 type MessagesConfig struct {
-	RecordingStarted   MessageConfig `toml:"recording_started"`
-	Transcribing       MessageConfig `toml:"transcribing"`
-	LLMProcessing      MessageConfig `toml:"llm_processing"`
-	ConfigReloaded     MessageConfig `toml:"config_reloaded"`
-	OperationCancelled MessageConfig `toml:"operation_cancelled"`
-	RecordingAborted   MessageConfig `toml:"recording_aborted"`
-	InjectionAborted   MessageConfig `toml:"injection_aborted"`
+	RecordingStarted    MessageConfig `toml:"recording_started"`
+	Transcribing        MessageConfig `toml:"transcribing"`
+	LLMProcessing       MessageConfig `toml:"llm_processing"`
+	ConfigReloaded      MessageConfig `toml:"config_reloaded"`
+	OperationCancelled  MessageConfig `toml:"operation_cancelled"`
+	RecordingAborted    MessageConfig `toml:"recording_aborted"`
+	InjectionAborted    MessageConfig `toml:"injection_aborted"`
+	VimRecordingStarted MessageConfig `toml:"vim_recording_started"`
+	VimProcessing       MessageConfig `toml:"vim_processing"`
 }
 
 // Resolve merges user config with defaults from MessageDefs

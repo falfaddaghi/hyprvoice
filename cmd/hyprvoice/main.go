@@ -33,6 +33,10 @@ func init() {
 	rootCmd.AddCommand(
 		serveCmd(),
 		toggleCmd(),
+		pttStartCmd(),
+		pttStopCmd(),
+		vimStartCmd(),
+		vimStopCmd(),
 		cancelCmd(),
 		statusCmd(),
 		versionCmd(),
@@ -65,6 +69,66 @@ func toggleCmd() *cobra.Command {
 			resp, err := bus.SendCommand('t')
 			if err != nil {
 				return fmt.Errorf("failed to toggle recording: %w", err)
+			}
+			fmt.Print(resp)
+			return nil
+		},
+	}
+}
+
+func pttStartCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "ptt-start",
+		Short: "Start push-to-talk dictation recording",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resp, err := bus.SendCommand('p')
+			if err != nil {
+				return fmt.Errorf("failed to start push-to-talk: %w", err)
+			}
+			fmt.Print(resp)
+			return nil
+		},
+	}
+}
+
+func pttStopCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "ptt-stop",
+		Short: "Stop push-to-talk and inject text",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resp, err := bus.SendCommand('r')
+			if err != nil {
+				return fmt.Errorf("failed to stop push-to-talk: %w", err)
+			}
+			fmt.Print(resp)
+			return nil
+		},
+	}
+}
+
+func vimStartCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "vim-start",
+		Short: "Start push-to-talk vim voice command recording",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resp, err := bus.SendCommand('e')
+			if err != nil {
+				return fmt.Errorf("failed to start vim mode: %w", err)
+			}
+			fmt.Print(resp)
+			return nil
+		},
+	}
+}
+
+func vimStopCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "vim-stop",
+		Short: "Stop vim push-to-talk and inject keystrokes",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resp, err := bus.SendCommand('r')
+			if err != nil {
+				return fmt.Errorf("failed to stop vim mode: %w", err)
 			}
 			fmt.Print(resp)
 			return nil

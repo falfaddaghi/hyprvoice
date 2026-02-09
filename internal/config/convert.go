@@ -105,6 +105,25 @@ func (c *Config) IsLLMEnabled() bool {
 	return c.LLM.Enabled && c.LLM.Provider != "" && c.LLM.Model != ""
 }
 
+// ToVimLLMConfig returns the LLM adapter configuration for vim mode
+func (c *Config) ToVimLLMConfig() LLMAdapterConfig {
+	config := LLMAdapterConfig{
+		Provider: c.Vim.LLM.Provider,
+		Model:    c.Vim.LLM.Model,
+	}
+
+	if c.Vim.LLM.Provider != "" {
+		config.APIKey = c.resolveAPIKeyForLLMProvider(c.Vim.LLM.Provider)
+	}
+
+	return config
+}
+
+// IsVimEnabled returns true if vim mode is enabled and configured
+func (c *Config) IsVimEnabled() bool {
+	return c.Vim.Enabled && c.Vim.LLM.Provider != "" && c.Vim.LLM.Model != ""
+}
+
 func (c *Config) ToInjectionConfig() injection.Config {
 	return injection.Config{
 		Backends:         c.Injection.Backends,
