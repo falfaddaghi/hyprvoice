@@ -27,9 +27,9 @@ func (p *NemotronProvider) IsLocal() bool {
 func (p *NemotronProvider) Models() []Model {
 	return []Model{
 		{
-			ID:                 "nemotron-speech-0.6b",
-			Name:               "Nemotron Speech ASR 0.6B",
-			Description:        "NVIDIA 600M-param streaming ASR; English-only, ~2.4GB VRAM, requires local NeMo server",
+			ID:                 "nemotron-speech-1.1b",
+			Name:               "Nemotron Speech ASR 1.1B",
+			Description:        "NVIDIA 1.1B-param ASR; English-only, ~4.5GB VRAM, best accuracy, requires local NeMo server",
 			Type:               Transcription,
 			SupportsBatch:      true,
 			SupportsStreaming:   false,
@@ -37,7 +37,21 @@ func (p *NemotronProvider) Models() []Model {
 			AdapterType:        AdapterNemotron,
 			SupportedLanguages: nemotronTranscriptionLanguages,
 			Endpoint:           nil,
-			LocalInfo:          nil, // detect-only, no managed download
+			LocalInfo:          nil,
+			DocsURL:            "https://huggingface.co/nvidia/parakeet-tdt-1.1b",
+		},
+		{
+			ID:                 "nemotron-speech-0.6b",
+			Name:               "Nemotron Speech ASR 0.6B",
+			Description:        "NVIDIA 600M-param ASR; English-only, ~2.4GB VRAM, requires local NeMo server",
+			Type:               Transcription,
+			SupportsBatch:      true,
+			SupportsStreaming:   false,
+			Local:              true,
+			AdapterType:        AdapterNemotron,
+			SupportedLanguages: nemotronTranscriptionLanguages,
+			Endpoint:           nil,
+			LocalInfo:          nil,
 			DocsURL:            "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2",
 		},
 	}
@@ -46,7 +60,7 @@ func (p *NemotronProvider) Models() []Model {
 func (p *NemotronProvider) DefaultModel(t ModelType) string {
 	switch t {
 	case Transcription:
-		return "nemotron-speech-0.6b"
+		return "nemotron-speech-1.1b"
 	}
 	return ""
 }

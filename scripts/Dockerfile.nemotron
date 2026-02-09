@@ -1,12 +1,11 @@
 FROM nvcr.io/nvidia/nemo:24.12
 
-RUN pip install --no-cache-dir flask
-
-# Pre-download the model at build time so container starts fast
-RUN python3 -c "import nemo.collections.asr as asr; asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v2')"
+RUN pip install --no-cache-dir flask numpy
 
 COPY nemotron_server.py /app/nemotron_server.py
 
 EXPOSE 8080
 
+# Model is downloaded on first run and cached via mounted volume.
+# Run with: docker run --rm --gpus all -p 8080:8080 -v nemotron-cache:/root/.cache nemotron-asr
 CMD ["python3", "/app/nemotron_server.py", "--port", "8080"]

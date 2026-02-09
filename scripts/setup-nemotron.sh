@@ -55,7 +55,7 @@ incus exec "$CONTAINER" -- bash -c "
     source /opt/nemotron/bin/activate
     pip install -q --upgrade pip
     pip install -q torch --index-url https://download.pytorch.org/whl/cu121
-    pip install -q 'nemo_toolkit[asr]' flask
+    pip install -q 'nemo_toolkit[asr]' flask numpy
 "
 
 # --- Copy server script ---
@@ -66,7 +66,7 @@ incus file push "$(dirname "$0")/nemotron_server.py" "$CONTAINER/opt/nemotron/se
 log "Pre-downloading model (first time takes ~1-2 min)..."
 incus exec "$CONTAINER" -- bash -c "
     source /opt/nemotron/bin/activate
-    python3 -c \"import nemo.collections.asr as asr; asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v2')\"
+    python3 -c \"import nemo.collections.asr as asr; asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-1.1b')\"
 "
 
 # --- Set up proxy for host access ---
