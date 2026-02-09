@@ -145,10 +145,36 @@ func statusCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get status: %w", err)
 			}
-			fmt.Print(resp)
+			fmt.Print(colorizeStatus(resp))
 			return nil
 		},
 	}
+}
+
+func colorizeStatus(resp string) string {
+	// resp format: "STATUS status=<value>\n"
+	const prefix = "STATUS status="
+	if !strings.HasPrefix(resp, prefix) {
+		return resp
+	}
+	status := strings.TrimSpace(strings.TrimPrefix(resp, prefix))
+
+	var color string
+	switch status {
+	case "idle":
+		color = "\033[32m" // green
+	case "recording":
+		color = "\033[31m" // red
+	case "transcribing":
+		color = "\033[33m" // yellow
+	case "processing":
+		color = "\033[34m" // blue
+	case "injecting":
+		color = "\033[36m" // cyan
+	default:
+		return resp
+	}
+	return fmt.Sprintf("%s%s%s%s\n", prefix, color, status, "\033[0m")
 }
 
 func versionCmd() *cobra.Command {
