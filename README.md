@@ -145,6 +145,71 @@ Configuration lives in `~/.config/hyprvoice/config.toml` and hot-reloads automat
 - `docs/structure.md` - code map and entry points
 - `docs/testing.md` - integration testing with test-models
 
+## Docker Setup (whisper.cpp)
+
+If you prefer running whisper.cpp via Docker instead of installing it natively, pre-built Dockerfiles are provided in `scripts/`.
+
+### CPU-Only
+
+```bash
+# Build the image
+docker build -t whisper-cpp -f scripts/Dockerfile.whisper scripts/
+
+# Create the wrapper script at ~/.local/bin/whisper-cli
+cat > ~/.local/bin/whisper-cli << 'SCRIPT'
+#!/bin/bash
+MODELS_DIR="${HOME}/.local/share/hyprvoice/models"
+TMP_DIR="/tmp"
+if [ "${WHISPER_CUDA}" = "1" ]; then
+    exec docker run --rm --gpus all \
+        -v "${MODELS_DIR}:${MODELS_DIR}:ro" \
+        -v "${TMP_DIR}:${TMP_DIR}:ro" \
+        whisper-cpp-cuda "$@"
+else
+    exec docker run --rm \
+        -v "${MODELS_DIR}:${MODELS_DIR}:ro" \
+        -v "${TMP_DIR}:${TMP_DIR}:ro" \
+        whisper-cpp "$@"
+fi
+SCRIPT
+chmod +x ~/.local/bin/whisper-cli
+
+# Download a model and configure
+hyprvoice model download base.en
+```
+
+### GPU (CUDA)
+
+For significantly faster transcription on NVIDIA GPUs, build the CUDA-enabled image:
+
+```bash
+# Build the CUDA image (requires nvidia-container-toolkit)
+docker build -t whisper-cpp-cuda -f scripts/Dockerfile.whisper-cuda scripts/
+
+# Enable GPU mode by setting the environment variable
+export WHISPER_CUDA=1
+```
+
+To make GPU mode persistent, add `WHISPER_CUDA=1` to your shell profile or the hyprvoice systemd service override:
+
+```bash
+# Shell profile (~/.bashrc or ~/.zshrc)
+export WHISPER_CUDA=1
+
+# Or systemd service override
+systemctl --user edit hyprvoice.service
+# Add under [Service]:
+# Environment="WHISPER_CUDA=1"
+```
+
+To switch back to CPU, unset the variable or set `WHISPER_CUDA=0`.
+
+### Requirements
+
+- Docker
+- `nvidia-container-toolkit` (for CUDA image only)
+- `~/.local/bin` in your `PATH`
+
 ## Troubleshooting
 
 ### Common Issues

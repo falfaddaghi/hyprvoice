@@ -222,7 +222,9 @@ func CheckPipeWireAvailable(ctx context.Context) error {
 	// Use a short timeout to avoid hangs on misconfigured systems.
 	checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(checkCtx, "pw-cli", "info", "all")
+	cmd := exec.CommandContext(checkCtx, "pw-cli", "info", "0")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("PipeWire not running or accessible: %w", err)
 	}

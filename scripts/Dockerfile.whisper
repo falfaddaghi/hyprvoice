@@ -1,0 +1,24 @@
+FROM ubuntu:24.04 AS builder
+
+RUN apt-get update && apt-get install -y \
+    build-essential cmake git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git /whisper.cpp
+
+WORKDIR /whisper.cpp
+RUN cmake -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --config Release -j$(nproc)
+
+# Collect all needed files into a staging dir
+RUN mkdir -p /staging/bin /staging/lib && \
+    cp build/bin/whisper-cli /staging/bin/ && \
+    find build -name '*.so*' -exec cp {} /staging/lib/ \; 2>/dev/null; true
+
+FROM ubuntu:24.04
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /staging/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=builder /staging/lib/ /usr/local/lib/
+RUN ldconfig
+
+ENTRYPOINT ["whisper-cli"]
