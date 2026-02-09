@@ -55,8 +55,12 @@ func TestProviderInterface(t *testing.T) {
 				t.Errorf("DefaultModel(LLM) = %q, want %q", p.DefaultModel(LLM), tc.defaultLLMModel)
 			}
 
-			if !p.RequiresAPIKey() {
-				t.Error("RequiresAPIKey() should be true for all cloud providers")
+			if tc.name == "opencode" {
+				if p.RequiresAPIKey() {
+					t.Error("RequiresAPIKey() should be false for opencode")
+				}
+			} else if !p.RequiresAPIKey() {
+				t.Error("RequiresAPIKey() should be true for cloud providers")
 			}
 
 			if tc.hasTranscription && len(ModelsOfType(p, Transcription)) == 0 {
@@ -136,7 +140,7 @@ func TestValidateAPIKey(t *testing.T) {
 		{"elevenlabs", "any-non-empty", true},
 		{"elevenlabs", "", false},
 		{"opencode", "any-non-empty", true},
-		{"opencode", "", false},
+		{"opencode", "", true},
 	}
 
 	for _, tc := range tests {

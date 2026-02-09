@@ -8,15 +8,15 @@ func (p *OpenCodeProvider) Name() string {
 }
 
 func (p *OpenCodeProvider) RequiresAPIKey() bool {
-	return true
+	return false
 }
 
 func (p *OpenCodeProvider) ValidateAPIKey(key string) bool {
-	return len(key) > 0
+	return true
 }
 
 func (p *OpenCodeProvider) APIKeyURL() string {
-	return "https://opencode.ai/zen"
+	return ""
 }
 
 func (p *OpenCodeProvider) IsLocal() bool {

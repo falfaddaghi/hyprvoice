@@ -37,8 +37,6 @@ func envVarForProvider(registryName string) string {
 		return "ELEVENLABS_API_KEY"
 	case "deepgram":
 		return "DEEPGRAM_API_KEY"
-	case "opencode":
-		return "OPENCODE_API_KEY"
 	default:
 		return ""
 	}

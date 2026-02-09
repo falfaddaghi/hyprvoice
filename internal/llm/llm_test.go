@@ -133,10 +133,9 @@ func TestNewAdapter(t *testing.T) {
 		t.Error("expected GroqAdapter type")
 	}
 
-	// Test OpenCode adapter creation
+	// Test OpenCode adapter creation (no API key required)
 	opencodeCfg := Config{
 		Provider: "opencode",
-		APIKey:   "oc-test-key",
 		Model:    "opencode/glm-4.7-free",
 	}
 	adapter, err = NewAdapter(opencodeCfg)
@@ -165,5 +164,41 @@ func TestNewAdapter(t *testing.T) {
 	_, err = NewAdapter(badCfg)
 	if err == nil {
 		t.Error("expected error for unsupported provider")
+	}
+}
+
+func TestOpenCodeAdapter_FallbackModels(t *testing.T) {
+	cfg := Config{
+		Provider: "opencode",
+		Model:    "opencode/glm-4.7-free",
+	}
+	adapter := NewOpenCodeAdapter(cfg)
+
+	if len(adapter.fallbackModels) == 0 {
+		t.Fatal("expected fallback models to be populated")
+	}
+
+	for _, fb := range adapter.fallbackModels {
+		if fb == cfg.Model {
+			t.Errorf("fallback models should not contain primary model %q", cfg.Model)
+		}
+	}
+}
+
+func TestOpenCodeAdapter_FallbackModels_DefaultModel(t *testing.T) {
+	cfg := Config{
+		Provider: "opencode",
+		Model:    "", // should default to opencode/glm-4.7-free
+	}
+	adapter := NewOpenCodeAdapter(cfg)
+
+	if len(adapter.fallbackModels) == 0 {
+		t.Fatal("expected fallback models to be populated")
+	}
+
+	for _, fb := range adapter.fallbackModels {
+		if fb == "opencode/glm-4.7-free" {
+			t.Errorf("fallback models should not contain default primary model %q", "opencode/glm-4.7-free")
+		}
 	}
 }

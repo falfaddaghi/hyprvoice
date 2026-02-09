@@ -38,9 +38,6 @@ func NewAdapter(cfg Config) (Adapter, error) {
 		}
 		return NewGroqAdapter(cfg), nil
 	case "opencode":
-		if cfg.APIKey == "" {
-			return nil, fmt.Errorf("OpenCode API key required")
-		}
 		return NewOpenCodeAdapter(cfg), nil
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)

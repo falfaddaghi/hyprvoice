@@ -29,7 +29,6 @@ const (
 	EnvMistralKey    = "MISTRAL_API_KEY"
 	EnvElevenLabsKey = "ELEVENLABS_API_KEY"
 	EnvDeepgramKey   = "DEEPGRAM_API_KEY"
-	EnvOpenCodeKey   = "OPENCODE_API_KEY"
 )
 
 // Adapter type constants for transcription backends
@@ -70,8 +69,6 @@ func EnvVarForProvider(provider string) string {
 		return EnvElevenLabsKey
 	case ProviderDeepgram:
 		return EnvDeepgramKey
-	case ProviderOpenCode:
-		return EnvOpenCodeKey
 	default:
 		return ""
 	}
