@@ -40,6 +40,7 @@ const (
 	AdapterWhisperCpp       = "whisper-cpp"
 	AdapterNemotron         = "nemotron"
 	AdapterOpenAIRealtime   = "openai-realtime"
+	AdapterOpenCode         = "opencode"
 )
 
 // BaseProviderName maps config provider names to registry provider names

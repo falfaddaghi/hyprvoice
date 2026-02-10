@@ -19,7 +19,7 @@ func TestProviderInterface(t *testing.T) {
 		{"groq", true, true, false, "whisper-large-v3-turbo", "llama-3.3-70b-versatile"},
 		{"mistral", true, false, false, "voxtral-mini-latest", ""},
 		{"elevenlabs", true, false, false, "scribe_v1", ""},
-		{"opencode", false, true, false, "", "opencode/glm-4.7-free"},
+		{"opencode", false, true, false, "", "opencode/kimi-k2.5-free"},
 	}
 
 	for _, tc := range providers {

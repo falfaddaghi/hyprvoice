@@ -1,30 +1,30 @@
 package llm
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/leonardotrapani/hyprvoice/internal/provider"
-	"github.com/sashabaranov/go-openai"
 )
 
-// OpenCodeAdapter implements Adapter using OpenCode's OpenAI-compatible API
+// OpenCodeAdapter implements Adapter using the opencode CLI (opencode run).
 type OpenCodeAdapter struct {
-	client         *openai.Client
 	config         Config
 	fallbackModels []string
 }
 
-// NewOpenCodeAdapter creates a new OpenCode LLM adapter
+// NewOpenCodeAdapter creates a new OpenCode LLM adapter that shells out to
+// the locally installed opencode CLI.
 func NewOpenCodeAdapter(cfg Config) *OpenCodeAdapter {
-	clientConfig := openai.DefaultConfig(cfg.APIKey) // APIKey can be empty; OpenCode Zen is free
-	clientConfig.BaseURL = "https://opencode.ai/zen/v1"
-
 	primaryModel := cfg.Model
 	if primaryModel == "" {
-		primaryModel = "opencode/glm-4.7-free"
+		primaryModel = "opencode/kimi-k2.5-free"
 	}
 
 	var fallbacks []string
@@ -37,36 +37,58 @@ func NewOpenCodeAdapter(cfg Config) *OpenCodeAdapter {
 	}
 
 	return &OpenCodeAdapter{
-		client:         openai.NewClientWithConfig(clientConfig),
 		config:         cfg,
 		fallbackModels: fallbacks,
 	}
 }
 
+// opencodeEvent represents a JSON event from `opencode run --format json`.
+type opencodeEvent struct {
+	Type string `json:"type"`
+	Part struct {
+		Text string `json:"text"`
+	} `json:"part"`
+}
+
 func (a *OpenCodeAdapter) callModel(ctx context.Context, model, systemPrompt, userPrompt string) (string, error) {
-	req := openai.ChatCompletionRequest{
-		Model: model,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: openai.ChatMessageRoleSystem, Content: systemPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: userPrompt},
-		},
-		Temperature: 0.3,
-	}
+	// Combine system + user prompt into a single message for the CLI.
+	prompt := systemPrompt + "\n\n" + userPrompt
+
+	args := []string{"run", "-m", model, "--format", "json", prompt}
 
 	start := time.Now()
-	resp, err := a.client.CreateChatCompletion(ctx, req)
+	cmd := exec.CommandContext(ctx, "opencode", args...)
+
+	out, err := cmd.Output()
 	duration := time.Since(start)
 
 	if err != nil {
-		log.Printf("opencode-llm-adapter: model %s failed after %v: %v", model, duration, err)
-		return "", fmt.Errorf("opencode chat completion (%s): %w", model, err)
+		stderr := ""
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			stderr = string(exitErr.Stderr)
+		}
+		log.Printf("opencode-llm-adapter: model %s failed after %v: %v (stderr: %s)", model, duration, err, stderr)
+		return "", fmt.Errorf("opencode run (%s): %w", model, err)
 	}
 
-	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("opencode chat completion (%s): no response choices", model)
+	// Parse JSON-lines output and collect text parts.
+	var textParts []string
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	for scanner.Scan() {
+		var ev opencodeEvent
+		if err := json.Unmarshal(scanner.Bytes(), &ev); err != nil {
+			continue
+		}
+		if ev.Type == "text" && ev.Part.Text != "" {
+			textParts = append(textParts, ev.Part.Text)
+		}
 	}
 
-	result := resp.Choices[0].Message.Content
+	result := strings.TrimSpace(strings.Join(textParts, ""))
+	if result == "" {
+		return "", fmt.Errorf("opencode run (%s): no text in response", model)
+	}
+
 	log.Printf("opencode-llm-adapter: model %s processed in %v", model, duration)
 	return result, nil
 }
@@ -92,7 +114,7 @@ func (a *OpenCodeAdapter) Process(ctx context.Context, text string) (string, err
 
 	primaryModel := a.config.Model
 	if primaryModel == "" {
-		primaryModel = "opencode/glm-4.7-free"
+		primaryModel = "opencode/kimi-k2.5-free"
 	}
 
 	result, err := a.callModel(ctx, primaryModel, systemPrompt, userPrompt)

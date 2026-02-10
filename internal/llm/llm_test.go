@@ -136,7 +136,7 @@ func TestNewAdapter(t *testing.T) {
 	// Test OpenCode adapter creation (no API key required)
 	opencodeCfg := Config{
 		Provider: "opencode",
-		Model:    "opencode/glm-4.7-free",
+		Model:    "opencode/kimi-k2.5-free",
 	}
 	adapter, err = NewAdapter(opencodeCfg)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestNewAdapter(t *testing.T) {
 func TestOpenCodeAdapter_FallbackModels(t *testing.T) {
 	cfg := Config{
 		Provider: "opencode",
-		Model:    "opencode/glm-4.7-free",
+		Model:    "opencode/kimi-k2.5-free",
 	}
 	adapter := NewOpenCodeAdapter(cfg)
 
@@ -188,7 +188,7 @@ func TestOpenCodeAdapter_FallbackModels(t *testing.T) {
 func TestOpenCodeAdapter_FallbackModels_DefaultModel(t *testing.T) {
 	cfg := Config{
 		Provider: "opencode",
-		Model:    "", // should default to opencode/glm-4.7-free
+		Model:    "", // should default to opencode/kimi-k2.5-free
 	}
 	adapter := NewOpenCodeAdapter(cfg)
 
@@ -197,8 +197,8 @@ func TestOpenCodeAdapter_FallbackModels_DefaultModel(t *testing.T) {
 	}
 
 	for _, fb := range adapter.fallbackModels {
-		if fb == "opencode/glm-4.7-free" {
-			t.Errorf("fallback models should not contain default primary model %q", "opencode/glm-4.7-free")
+		if fb == "opencode/kimi-k2.5-free" {
+			t.Errorf("fallback models should not contain default primary model %q", "opencode/kimi-k2.5-free")
 		}
 	}
 }
