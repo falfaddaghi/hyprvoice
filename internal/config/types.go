@@ -35,6 +35,7 @@ type VimConfig struct {
 type VimLLMConfig struct {
 	Provider     string `toml:"provider"`      // reuse from [providers]
 	Model        string `toml:"model"`
+	OpenCodeURL  string `toml:"opencode_url"`
 	CustomPrompt string `toml:"custom_prompt"` // extra instructions
 }
 
@@ -48,6 +49,7 @@ type LLMConfig struct {
 	Enabled        bool                    `toml:"enabled"`
 	Provider       string                  `toml:"provider"`
 	Model          string                  `toml:"model"`
+	OpenCodeURL    string                  `toml:"opencode_url"`
 	PostProcessing LLMPostProcessingConfig `toml:"post_processing"`
 	CustomPrompt   LLMCustomPromptConfig   `toml:"custom_prompt"`
 }
@@ -72,6 +74,7 @@ type RecordingConfig struct {
 	Format            string        `toml:"format"`
 	BufferSize        int           `toml:"buffer_size"`
 	Device            string        `toml:"device"`
+	PreferredDevices  []string      `toml:"preferred_devices"`
 	ChannelBufferSize int           `toml:"channel_buffer_size"`
 	Timeout           time.Duration `toml:"timeout"`
 }
@@ -151,6 +154,7 @@ type LLMAdapterConfig struct {
 	Provider          string
 	APIKey            string
 	Model             string
+	OpenCodeURL       string
 	RemoveStutters    bool
 	AddPunctuation    bool
 	FixGrammar        bool

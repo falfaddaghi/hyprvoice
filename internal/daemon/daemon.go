@@ -57,6 +57,7 @@ func New() (*Daemon, error) {
 
 func (d *Daemon) onConfigReload() {
 	log.Printf("Config reloaded, restarting pipeline")
+	d.notifier.StopAnimation()
 	d.stopPipeline()
 
 	conf := d.configMgr.GetConfig()
@@ -78,6 +79,8 @@ func (d *Daemon) status() pipeline.Status {
 }
 
 func (d *Daemon) stopPipeline() {
+	d.notifier.StopAnimation()
+
 	d.mu.Lock()
 	p := d.pipeline
 	d.pipeline = nil
@@ -225,7 +228,7 @@ func (d *Daemon) toggle() {
 		} else {
 			d.mu.RUnlock()
 		}
-		go d.notifier.Send(notify.MsgTranscribing)
+		go d.notifier.StartAnimation(notify.MsgTranscribing)
 
 	case pipeline.Injecting:
 		d.stopPipeline()
@@ -282,7 +285,7 @@ func (d *Daemon) pttStop() {
 		} else {
 			d.mu.RUnlock()
 		}
-		go d.notifier.Send(notify.MsgTranscribing)
+		go d.notifier.StartAnimation(notify.MsgTranscribing)
 
 	case pipeline.Transcribing:
 		d.mu.RLock()
@@ -294,7 +297,7 @@ func (d *Daemon) pttStop() {
 		} else {
 			d.mu.RUnlock()
 		}
-		go d.notifier.Send(notify.MsgTranscribing)
+		go d.notifier.StartAnimation(notify.MsgTranscribing)
 
 	case pipeline.Processing, pipeline.Injecting:
 		log.Printf("Daemon: PTT stop requested but already processing/injecting, ignoring")
@@ -306,6 +309,7 @@ func (d *Daemon) cancelPipeline() {
 	case pipeline.Idle:
 		log.Printf("Daemon: Cancel requested but pipeline is idle, ignoring")
 	default:
+		d.notifier.StopAnimation()
 		d.stopPipeline()
 		go d.notifier.Send(notify.MsgOperationCancelled)
 	}
@@ -316,6 +320,8 @@ func (d *Daemon) monitorPipelineErrors(p pipeline.Pipeline) {
 	for {
 		select {
 		case pipelineErr := <-errorCh:
+			d.notifier.StopAnimation()
+
 			message := pipelineErr.Message
 
 			if pipelineErr.Err != nil {
@@ -334,7 +340,14 @@ func (d *Daemon) monitorPipelineNotifications(p pipeline.Pipeline) {
 	for {
 		select {
 		case mt := <-notifyCh:
-			d.notifier.Send(mt)
+			switch mt {
+			case notify.MsgTranscribing, notify.MsgLLMProcessing, notify.MsgVimProcessing:
+				d.notifier.StartAnimation(mt)
+			case notify.MsgProcessingComplete:
+				d.notifier.StopAnimation()
+			default:
+				d.notifier.Send(mt)
+			}
 		case <-d.ctx.Done():
 			return
 		}

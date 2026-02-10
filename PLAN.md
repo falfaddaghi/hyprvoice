@@ -46,6 +46,7 @@ This branch contains **two logically independent features**:
 | 10 | **ydotool spawns many processes.** One process per keystroke token, plus 3 for Ctrl combos. Slow for long sequences with timing gaps. | `ydotool.go:127-156` |
 | 11 | **No linter configured.** No `.golangci.yml` exists — easy to miss deprecated APIs, unused code, etc. | project-level |
 | 12 | **Nemotron Flask dev server.** Uses `app.run()` instead of gunicorn. Acceptable for local single-user use but fragile. | `scripts/nemotron_server.py` |
+| 13 | **OpenCode CLI cold boot adds ~30s latency.** First `opencode run` invocation takes ~30s (cold boot), subsequent calls ~5s. Vim commands feel unresponsive on first use after daemon start. | `adapter_opencode.go` |
 
 ---
 
@@ -78,6 +79,11 @@ This branch contains **two logically independent features**:
 9. **Optimize ydotool keystroke batching** — Where possible, batch multiple keycodes into a single `ydotool key` call (e.g., `ydotool key 1:1 1:0 2:1 2:0`) instead of spawning a process per token.
 
 10. **Add `.golangci.yml`** — Configure a linter to catch deprecated APIs, unused code, and common issues in CI.
+
+12. **Reduce OpenCode CLI cold boot latency** — The `opencode run` CLI takes ~30s on first invocation (cold boot) due to server startup, node bootstrapping, and model loading. Subsequent calls take ~5s. Options:
+    - **`opencode serve` + `--attach`**: Run a persistent `opencode serve` in the background (e.g. via systemd user unit), then use `opencode run --attach http://localhost:<port>` in the adapter. Eliminates cold boot entirely.
+    - **Warm-up call**: Fire a no-op `opencode run` on daemon startup in a goroutine so the first real vim command doesn't pay the penalty.
+    - **Observed timings** (2026-02-10): cold=30.1s, warm=5.2s, model=`opencode/kimi-k2.5-free`.
 
 ### Phase 5: Branch Hygiene (Optional)
 

@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/leonardotrapani/hyprvoice/internal/bus"
 	"github.com/leonardotrapani/hyprvoice/internal/config"
@@ -44,6 +47,7 @@ func init() {
 		onboardingCmd(),
 		configureCmd(),
 		modelCmd(),
+		waybarCmd(),
 	)
 }
 
@@ -585,4 +589,52 @@ func runModelRemove(modelName string) error {
 
 	fmt.Printf("model '%s' removed successfully\n", modelName)
 	return nil
+}
+
+func waybarCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "waybar",
+		Short: "Stream status as Waybar JSON (custom/hyprvoice module)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWaybar()
+		},
+	}
+}
+
+type waybarOutput struct {
+	Text    string `json:"text"`
+	Alt     string `json:"alt"`
+	Class   string `json:"class"`
+	Tooltip string `json:"tooltip"`
+}
+
+func runWaybar() error {
+	enc := json.NewEncoder(os.Stdout)
+	lastState := ""
+
+	for {
+		state := "idle"
+		resp, err := bus.SendCommand('s')
+		if err == nil {
+			const prefix = "STATUS status="
+			if strings.HasPrefix(resp, prefix) {
+				state = strings.TrimSpace(strings.TrimPrefix(resp, prefix))
+			}
+		}
+
+		if state != lastState {
+			out := waybarOutput{
+				Text:    state,
+				Alt:     state,
+				Class:   state,
+				Tooltip: "Hyprvoice: " + state,
+			}
+			if err := enc.Encode(out); err != nil {
+				return err
+			}
+			lastState = state
+		}
+
+		time.Sleep(300 * time.Millisecond)
+	}
 }

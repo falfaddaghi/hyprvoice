@@ -43,6 +43,10 @@ func (w *wtypeBackend) Inject(ctx context.Context, text string, timeout time.Dur
 		return err
 	}
 
+	// Brief pause so modifier keys (e.g. Super from keybind) are released
+	// before wtype starts typing, preventing Super+<key> combos.
+	time.Sleep(50 * time.Millisecond)
+
 	cmd := exec.CommandContext(ctx, "wtype", "--", text)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("wtype failed: %w", err)
@@ -58,6 +62,9 @@ func (w *wtypeBackend) InjectKeys(ctx context.Context, keys string, timeout time
 	if err := w.Available(); err != nil {
 		return err
 	}
+
+	// Brief pause so modifier keys (e.g. Super from keybind) are released
+	time.Sleep(50 * time.Millisecond)
 
 	args := buildWtypeKeysArgs(keys)
 	cmd := exec.CommandContext(ctx, "wtype", args...)

@@ -93,20 +93,25 @@ func TestNotifierInterface(t *testing.T) {
 	notifier = NewDesktop(msgs)
 	notifier.Send(MsgRecordingStarted)
 	notifier.Error("Error")
+	notifier.StopAnimation()
 
 	notifier = NewLog(msgs)
 	notifier.Send(MsgRecordingStarted)
 	notifier.Error("Error")
+	notifier.StartAnimation(MsgTranscribing)
+	notifier.StopAnimation()
 
 	notifier = &Nop{}
 	notifier.Send(MsgRecordingStarted)
 	notifier.Error("Error")
+	notifier.StartAnimation(MsgTranscribing)
+	notifier.StopAnimation()
 }
 
 func TestMessageDefs(t *testing.T) {
 	// Verify MessageDefs contains expected entries
-	if len(MessageDefs) != 9 {
-		t.Errorf("Expected 9 MessageDefs, got %d", len(MessageDefs))
+	if len(MessageDefs) != 10 {
+		t.Errorf("Expected 10 MessageDefs, got %d", len(MessageDefs))
 	}
 
 	// Verify each has required fields

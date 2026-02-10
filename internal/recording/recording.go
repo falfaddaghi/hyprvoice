@@ -9,6 +9,7 @@ import (
 	"log"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -25,6 +26,7 @@ type Config struct {
 	Format            string
 	BufferSize        int
 	Device            string
+	PreferredDevices  []string
 	ChannelBufferSize int
 	Timeout           time.Duration
 }
@@ -209,10 +211,43 @@ func (r *recorder) buildPwRecordArgs() []string {
 		"--channels", strconv.Itoa(r.config.Channels),
 		"-", // stdout
 	}
-	if r.config.Device != "" {
-		args = append(args, "--target", r.config.Device)
+
+	device := r.config.Device
+	if device == "" {
+		device = resolvePreferredDevice(r.config.PreferredDevices)
+	}
+	if device != "" {
+		args = append(args, "--target", device)
 	}
 	return args
+}
+
+// resolvePreferredDevice checks PipeWire sources and returns the first
+// preferred device that is currently available, or "" for system default.
+func resolvePreferredDevice(preferred []string) string {
+	if len(preferred) == 0 {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "pactl", "list", "sources", "short").Output()
+	if err != nil {
+		log.Printf("Recording: failed to list sources: %v, using system default", err)
+		return ""
+	}
+
+	sources := string(out)
+	for _, pref := range preferred {
+		if strings.Contains(sources, pref) {
+			log.Printf("Recording: preferred device found: %s", pref)
+			return pref
+		}
+	}
+
+	log.Printf("Recording: no preferred device found, using system default")
+	return ""
 }
 
 func CheckPipeWireAvailable(ctx context.Context) error {

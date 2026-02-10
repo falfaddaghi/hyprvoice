@@ -1,30 +1,40 @@
 package llm
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
-	"os/exec"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/leonardotrapani/hyprvoice/internal/provider"
 )
 
-// OpenCodeAdapter implements Adapter using the opencode CLI (opencode run).
+const defaultOpenCodeURL = "http://127.0.0.1:14500"
+
+// OpenCodeAdapter implements Adapter using the OpenCode REST server (opencode serve).
 type OpenCodeAdapter struct {
 	config         Config
+	serverURL      string
+	client         *http.Client
 	fallbackModels []string
 }
 
-// NewOpenCodeAdapter creates a new OpenCode LLM adapter that shells out to
-// the locally installed opencode CLI.
+// NewOpenCodeAdapter creates a new OpenCode LLM adapter that talks to
+// the OpenCode REST server over HTTP.
 func NewOpenCodeAdapter(cfg Config) *OpenCodeAdapter {
 	primaryModel := cfg.Model
 	if primaryModel == "" {
 		primaryModel = "opencode/kimi-k2.5-free"
+	}
+
+	serverURL := cfg.OpenCodeURL
+	if serverURL == "" {
+		serverURL = defaultOpenCodeURL
 	}
 
 	var fallbacks []string
@@ -38,55 +48,131 @@ func NewOpenCodeAdapter(cfg Config) *OpenCodeAdapter {
 
 	return &OpenCodeAdapter{
 		config:         cfg,
+		serverURL:      serverURL,
+		client:         &http.Client{Timeout: 60 * time.Second},
 		fallbackModels: fallbacks,
 	}
 }
 
-// opencodeEvent represents a JSON event from `opencode run --format json`.
-type opencodeEvent struct {
+// sessionResponse is the JSON response from POST /session.
+type sessionResponse struct {
+	ID string `json:"id"`
+}
+
+// messageRequest is the JSON body for POST /session/{id}/message.
+type messageRequest struct {
+	Model  messageModel  `json:"model"`
+	System string        `json:"system"`
+	Parts  []messagePart `json:"parts"`
+}
+
+type messageModel struct {
+	ProviderID string `json:"providerID"`
+	ModelID    string `json:"modelID"`
+}
+
+type messagePart struct {
 	Type string `json:"type"`
-	Part struct {
-		Text string `json:"text"`
-	} `json:"part"`
+	Text string `json:"text"`
+}
+
+// messageResponse is the JSON response from POST /session/{id}/message.
+type messageResponse struct {
+	Parts []messagePart `json:"parts"`
+}
+
+// parseModelID splits "opencode/kimi-k2.5-free" into ("opencode", "kimi-k2.5-free").
+func parseModelID(model string) (providerID, modelID string) {
+	if i := strings.IndexByte(model, '/'); i >= 0 {
+		return model[:i], model[i+1:]
+	}
+	return "opencode", model
+}
+
+func (a *OpenCodeAdapter) createSession(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.serverURL+"/session", nil)
+	if err != nil {
+		return "", fmt.Errorf("opencode: create session request: %w", err)
+	}
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("opencode: create session: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("opencode: create session: status %d: %s", resp.StatusCode, body)
+	}
+
+	var sr sessionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
+		return "", fmt.Errorf("opencode: decode session response: %w", err)
+	}
+	if sr.ID == "" {
+		return "", fmt.Errorf("opencode: create session: empty session ID")
+	}
+	return sr.ID, nil
 }
 
 func (a *OpenCodeAdapter) callModel(ctx context.Context, model, systemPrompt, userPrompt string) (string, error) {
-	// Combine system + user prompt into a single message for the CLI.
-	prompt := systemPrompt + "\n\n" + userPrompt
-
-	args := []string{"run", "-m", model, "--format", "json", prompt}
-
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, "opencode", args...)
 
-	out, err := cmd.Output()
-	duration := time.Since(start)
-
+	sessionID, err := a.createSession(ctx)
 	if err != nil {
-		stderr := ""
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			stderr = string(exitErr.Stderr)
-		}
-		log.Printf("opencode-llm-adapter: model %s failed after %v: %v (stderr: %s)", model, duration, err, stderr)
-		return "", fmt.Errorf("opencode run (%s): %w", model, err)
+		return "", err
 	}
 
-	// Parse JSON-lines output and collect text parts.
+	providerID, modelID := parseModelID(model)
+
+	body := messageRequest{
+		Model:  messageModel{ProviderID: providerID, ModelID: modelID},
+		System: systemPrompt,
+		Parts:  []messagePart{{Type: "text", Text: userPrompt}},
+	}
+
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("opencode: marshal message: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/session/%s/message", a.serverURL, sessionID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyJSON))
+	if err != nil {
+		return "", fmt.Errorf("opencode: create message request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := a.client.Do(req)
+	duration := time.Since(start)
+	if err != nil {
+		log.Printf("opencode-llm-adapter: model %s failed after %v: %v", model, duration, err)
+		return "", fmt.Errorf("opencode message (%s): %w", model, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Printf("opencode-llm-adapter: model %s failed after %v: status %d: %s", model, duration, resp.StatusCode, respBody)
+		return "", fmt.Errorf("opencode message (%s): status %d: %s", model, resp.StatusCode, respBody)
+	}
+
+	var mr messageResponse
+	if err := json.NewDecoder(resp.Body).Decode(&mr); err != nil {
+		return "", fmt.Errorf("opencode: decode message response: %w", err)
+	}
+
 	var textParts []string
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		var ev opencodeEvent
-		if err := json.Unmarshal(scanner.Bytes(), &ev); err != nil {
-			continue
-		}
-		if ev.Type == "text" && ev.Part.Text != "" {
-			textParts = append(textParts, ev.Part.Text)
+	for _, p := range mr.Parts {
+		if p.Type == "text" && p.Text != "" {
+			textParts = append(textParts, p.Text)
 		}
 	}
 
 	result := strings.TrimSpace(strings.Join(textParts, ""))
 	if result == "" {
-		return "", fmt.Errorf("opencode run (%s): no text in response", model)
+		return "", fmt.Errorf("opencode message (%s): no text in response", model)
 	}
 
 	log.Printf("opencode-llm-adapter: model %s processed in %v", model, duration)

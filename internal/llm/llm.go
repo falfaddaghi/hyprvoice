@@ -15,6 +15,7 @@ type Config struct {
 	Provider          string
 	APIKey            string
 	Model             string
+	OpenCodeURL       string // base URL for OpenCode REST server (default: http://127.0.0.1:14500)
 	RemoveStutters    bool
 	AddPunctuation    bool
 	FixGrammar        bool

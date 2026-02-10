@@ -86,6 +86,9 @@ func Save(cfg *Config) error {
 	if cfg.LLM.Model != "" {
 		sb.WriteString(fmt.Sprintf("  model = %q\n", cfg.LLM.Model))
 	}
+	if cfg.LLM.OpenCodeURL != "" {
+		sb.WriteString(fmt.Sprintf("  opencode_url = %q\n", cfg.LLM.OpenCodeURL))
+	}
 	sb.WriteString("\n")
 
 	sb.WriteString("  [llm.post_processing]\n")
@@ -125,6 +128,9 @@ func Save(cfg *Config) error {
 	}
 	if cfg.Vim.LLM.Model != "" {
 		sb.WriteString(fmt.Sprintf("    model = %q\n", cfg.Vim.LLM.Model))
+	}
+	if cfg.Vim.LLM.OpenCodeURL != "" {
+		sb.WriteString(fmt.Sprintf("    opencode_url = %q\n", cfg.Vim.LLM.OpenCodeURL))
 	}
 	if cfg.Vim.LLM.CustomPrompt != "" {
 		sb.WriteString(fmt.Sprintf("    custom_prompt = %q\n", cfg.Vim.LLM.CustomPrompt))
@@ -284,6 +290,7 @@ keywords = []
   enabled = true               # Enable LLM post-processing (highly recommended)
   provider = "openai"          # "openai" or "groq" (must have API key configured above)
   model = "gpt-4o-mini"        # OpenAI: "gpt-4o-mini", Groq: "llama-3.3-70b-versatile"
+  # opencode_url = "http://127.0.0.1:14500"  # OpenCode REST server URL (for provider = "opencode")
 
 [llm.post_processing]
   remove_stutters = true       # Remove "um", "uh", repeated words

@@ -319,6 +319,7 @@ func (p *pipeline) handleInjectAction(ctx context.Context, recorder recording.Re
 		p.handleDictationInjection(ctx, transcriptionText)
 	}
 
+	p.sendNotify(notify.MsgProcessingComplete)
 	p.setStatus(Idle)
 }
 
@@ -334,6 +335,7 @@ func (p *pipeline) handleDictationInjection(ctx context.Context, transcriptionTe
 			Provider:          llmCfg.Provider,
 			APIKey:            llmCfg.APIKey,
 			Model:             llmCfg.Model,
+			OpenCodeURL:       llmCfg.OpenCodeURL,
 			RemoveStutters:    llmCfg.RemoveStutters,
 			AddPunctuation:    llmCfg.AddPunctuation,
 			FixGrammar:        llmCfg.FixGrammar,
@@ -365,6 +367,12 @@ func (p *pipeline) handleDictationInjection(ctx context.Context, transcriptionTe
 }
 
 func (p *pipeline) handleVimInjection(ctx context.Context, transcriptionText string) {
+	// Guard: skip LLM call if transcription is empty/noise
+	if llm.IsNoiseTranscription(transcriptionText) {
+		log.Printf("Pipeline: Vim mode - noise transcription %q, skipping", transcriptionText)
+		return
+	}
+
 	p.setStatus(Processing)
 	p.sendNotify(notify.MsgVimProcessing)
 	log.Printf("Pipeline: Vim mode - converting speech to keystrokes")
@@ -376,6 +384,7 @@ func (p *pipeline) handleVimInjection(ctx context.Context, transcriptionText str
 		Provider:     vimCfg.Provider,
 		APIKey:       vimCfg.APIKey,
 		Model:        vimCfg.Model,
+		OpenCodeURL:  vimCfg.OpenCodeURL,
 		SystemPrompt: systemPrompt,
 	})
 	if err != nil {
@@ -389,12 +398,17 @@ func (p *pipeline) handleVimInjection(ctx context.Context, transcriptionText str
 		return
 	}
 
-	log.Printf("Pipeline: Vim keystrokes: %s", vimKeys)
+	log.Printf("Pipeline: Vim raw LLM response: %s", vimKeys)
+
+	// Validate: reject natural-language responses, strip code fences
+	vimKeys = llm.ValidateVimKeys(vimKeys)
 
 	if vimKeys == "" {
-		log.Printf("Pipeline: Vim mode - LLM returned empty keystrokes, nothing to inject")
+		log.Printf("Pipeline: Vim mode - no valid keystrokes after validation, nothing to inject")
 		return
 	}
+
+	log.Printf("Pipeline: Vim keystrokes (validated): %s", vimKeys)
 
 	p.setStatus(Injecting)
 	injector := p.injectorFactory(p.config.ToInjectionConfig())

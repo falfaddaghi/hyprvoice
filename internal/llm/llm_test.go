@@ -202,3 +202,49 @@ func TestOpenCodeAdapter_FallbackModels_DefaultModel(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenCodeAdapter_DefaultServerURL(t *testing.T) {
+	adapter := NewOpenCodeAdapter(Config{
+		Provider: "opencode",
+		Model:    "opencode/kimi-k2.5-free",
+	})
+	if adapter.serverURL != defaultOpenCodeURL {
+		t.Errorf("expected default server URL %q, got %q", defaultOpenCodeURL, adapter.serverURL)
+	}
+}
+
+func TestOpenCodeAdapter_CustomServerURL(t *testing.T) {
+	custom := "http://localhost:9999"
+	adapter := NewOpenCodeAdapter(Config{
+		Provider:    "opencode",
+		Model:       "opencode/kimi-k2.5-free",
+		OpenCodeURL: custom,
+	})
+	if adapter.serverURL != custom {
+		t.Errorf("expected custom server URL %q, got %q", custom, adapter.serverURL)
+	}
+}
+
+func TestParseModelID(t *testing.T) {
+	tests := []struct {
+		input      string
+		providerID string
+		modelID    string
+	}{
+		{"opencode/kimi-k2.5-free", "opencode", "kimi-k2.5-free"},
+		{"opencode/big-pickle", "opencode", "big-pickle"},
+		{"other-provider/some-model", "other-provider", "some-model"},
+		{"bare-model-name", "opencode", "bare-model-name"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			pID, mID := parseModelID(tc.input)
+			if pID != tc.providerID {
+				t.Errorf("parseModelID(%q) providerID = %q, want %q", tc.input, pID, tc.providerID)
+			}
+			if mID != tc.modelID {
+				t.Errorf("parseModelID(%q) modelID = %q, want %q", tc.input, mID, tc.modelID)
+			}
+		})
+	}
+}

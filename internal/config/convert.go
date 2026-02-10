@@ -16,6 +16,7 @@ func (c *Config) ToRecordingConfig() recording.Config {
 		Format:            c.Recording.Format,
 		BufferSize:        c.Recording.BufferSize,
 		Device:            c.Recording.Device,
+		PreferredDevices:  c.Recording.PreferredDevices,
 		ChannelBufferSize: c.Recording.ChannelBufferSize,
 		Timeout:           c.Recording.Timeout,
 	}
@@ -65,6 +66,7 @@ func (c *Config) ToLLMConfig() LLMAdapterConfig {
 	config := LLMAdapterConfig{
 		Provider:          c.LLM.Provider,
 		Model:             c.LLM.Model,
+		OpenCodeURL:       c.LLM.OpenCodeURL,
 		RemoveStutters:    c.LLM.PostProcessing.RemoveStutters,
 		AddPunctuation:    c.LLM.PostProcessing.AddPunctuation,
 		FixGrammar:        c.LLM.PostProcessing.FixGrammar,
@@ -107,9 +109,14 @@ func (c *Config) IsLLMEnabled() bool {
 
 // ToVimLLMConfig returns the LLM adapter configuration for vim mode
 func (c *Config) ToVimLLMConfig() LLMAdapterConfig {
+	openCodeURL := c.Vim.LLM.OpenCodeURL
+	if openCodeURL == "" {
+		openCodeURL = c.LLM.OpenCodeURL
+	}
 	config := LLMAdapterConfig{
-		Provider: c.Vim.LLM.Provider,
-		Model:    c.Vim.LLM.Model,
+		Provider:    c.Vim.LLM.Provider,
+		Model:       c.Vim.LLM.Model,
+		OpenCodeURL: openCodeURL,
 	}
 
 	if c.Vim.LLM.Provider != "" {

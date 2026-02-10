@@ -101,10 +101,15 @@ def transcribe():
     try:
         normalize_audio(tmp_path)
 
-        transcriptions = model.transcribe([tmp_path])
-        # NeMo returns different formats depending on version
-        if isinstance(transcriptions, list):
-            if len(transcriptions) > 0 and isinstance(transcriptions[0], str):
+        result = model.transcribe([tmp_path])
+        # Beam search returns (best_hyps, all_hyps) tuple; greedy returns a list
+        if isinstance(result, tuple):
+            transcriptions = result[0]
+        else:
+            transcriptions = result
+
+        if isinstance(transcriptions, list) and len(transcriptions) > 0:
+            if isinstance(transcriptions[0], str):
                 text = transcriptions[0]
             elif hasattr(transcriptions[0], "text"):
                 text = transcriptions[0].text
