@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import copy
+import gc
 import io
 import logging
 import tempfile
@@ -82,8 +83,15 @@ def load_model(name):
     if torch.cuda.is_available():
         model = model.cuda()
         log.info("Model loaded on GPU: %s", torch.cuda.get_device_name(0))
+        mem_alloc = torch.cuda.memory_allocated() / 1024**2
+        mem_reserved = torch.cuda.memory_reserved() / 1024**2
+        log.info("GPU memory after model load: %.0f MB allocated, %.0f MB reserved", mem_alloc, mem_reserved)
     else:
         log.warning("CUDA not available, running on CPU (will be slow)")
+
+    rss_mb = os.popen("ps -o rss= -p %d" % os.getpid()).read().strip()
+    if rss_mb:
+        log.info("Process RSS after model load: %.0f MB", int(rss_mb) / 1024)
     log.info("Model ready.")
 
 
@@ -125,6 +133,9 @@ def transcribe():
         return jsonify({"error": str(e)}), 500
     finally:
         os.unlink(tmp_path)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
 
 
 @app.route("/health", methods=["GET"])

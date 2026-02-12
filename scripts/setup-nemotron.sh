@@ -27,6 +27,10 @@ else
     sleep 3
 fi
 
+# --- Memory limit ---
+log "Setting memory limit to 8GB..."
+incus config set "$CONTAINER" limits.memory=8GiB
+
 # --- GPU passthrough ---
 if ! incus config device show "$CONTAINER" | grep -q "gpu"; then
     log "Adding GPU passthrough..."

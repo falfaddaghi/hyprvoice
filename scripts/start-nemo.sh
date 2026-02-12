@@ -30,7 +30,9 @@ start_container() {
     fi
 
     cyan "Starting Nemotron ASR container..."
-    docker run -d --name "$CONTAINER_NAME" --gpus all -p "${PORT}:8080" "$IMAGE_NAME" >/dev/null
+    docker run -d --name "$CONTAINER_NAME" --gpus all \
+        --memory=8g --memory-swap=8g \
+        -p "${PORT}:8080" "$IMAGE_NAME" >/dev/null
     green "Container started."
 }
 
